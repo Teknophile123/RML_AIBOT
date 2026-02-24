@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RML AI | Fee Assistant</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Bootstrap -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+<!-- XLSX -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<style>
+  /* Background Layer */
+#particles-js {
+    position: fixed;
+    top: 0;
+    left: 0;
+     inset: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #ffffff, #effdff);
+    z-index: -1;
+}
+
+/*  LOCK PAGE */
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: "Inter", sans-serif;
+}
+
+/* LAYOUT */
+.app {
+  display: flex;
+  height: 100%;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 260px;
+  background: #0b1c2d;
+  color: #fff;
+  padding: 12px;
+  overflow-y: auto;
+  position: relative;
+}
+.sidebar p.pbytektxt{    position: absolute;
+    bottom: 0px;
+    width: calc(100% - 20px);
+    text-align: center;
+    font-size: 12px;
+    font-weight: 300;
+    color: #fff;}
+.sidebar h6 {
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+#historyList{overflow-x: hidden;
+    overflow-y: auto;
+    height: calc(100vh - 170px);
+    width: 100%;}
+
+.chat-item {
+  background: rgba(255,255,255,0.1);
+  padding: 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-item span {
+  cursor: pointer;
+  flex: 1;
+}
+
+.chat-item:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+/* MAIN */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* HEADER */
+.header {
+  background: #fff;
+  padding: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      z-index: 9;
+}
+
+.header img {
+      max-height: 95px;
+    margin: 5px 0px 10px;
+}
+
+/* CHAT AREA (ONLY THIS SCROLLS) */
+.chat-container {
+  flex: 1;
+  padding: 20px;
+  padding-bottom: 120px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* CHAT BUBBLES */
+.chat-bubble {
+  padding: 14px 16px;
+  border-radius: 14px;
+  max-width: 100%;
+}
+
+.user {
+  align-self: flex-end;
+  background: #0d6efd;
+  color: #fff;
+}
+
+.assistant {
+     align-self: flex-start;
+    background: #fff;
+    border: 2px solid #7094e5;
+
+}
+
+/*  TABLE ISOLATION FIX */
+.table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: scroll;
+  margin-top: 10px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background: #fff;
+  max-height: 70vh;
+}
+
+.table-wrapper table {
+  width: max-content;
+  min-width: 100%;
+  font-size: 0.8rem;
+  border-collapse: collapse;
+}
+
+.table-wrapper th,
+.table-wrapper td {
+  padding: 6px 10px;
+  border: 1px solid #dee2e6;
+  white-space: nowrap;
+}
+
+.table-wrapper th {
+  background: #f1f5f9;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/*  INPUT BAR FIX (NO OVERLAP) */
+.input-area {
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  border-top: 1px solid #dee2e6;
+  padding: 10px;
+  z-index: 10;
+  box-shadow: -1px 2px 13px 0px #8f8f8f;
+}
+
+h1.display-6.fw-bold.txtshdw{font-size: 28px; text-shadow: 1px -1px 1px #b1b1b1; margin-bottom: 3px;} 
+</style>
+</head>
+
+<body>
+    <div id="particles-js"></div>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <h6>Chat History</h6>
+    <div id="historyList"></div>
+    <button class="btn btn-sm btn-light w-100 mt-2" onclick="newChat()">+ New Chat</button>
+        <!-- CLEAR HISTORY BUTTON -->
+    <button class="btn btn-sm btn-danger w-100 mt-2" onclick="clearHistory()">Clear History</button>
+    <p class="pbytektxt">Powered By Teknophile</p>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <div class="header d-flex justify-content-between align-items-center px-3">
+      <div class="text-center w-100">
+        <img src="images/logo-light_1.svg">
+        <!----h5>I am <span class="text-primary">TekAI</span>, your assistant</h5---->
+        <h1 class="display-6 fw-bold txtshdw">I am here to make  <span style="color:#00d2ff">your Task</span> Simple</h1>
+      </div>
+      <!---button class="btn btn-outline-danger btn-sm" onclick="resetChat()">Reset</button---->
+    </div>
+
+    <div id="chatBox" class="chat-container"></div>
+
+    <div class="input-area">
+      <div class="input-group input-group-lg">
+        <input id="aiInput" class="form-control" placeholder="Ask about Academic, Mess or Hostel fees...">
+        <button class="btn btn-primary" onclick="handleSearch()">Send</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+<script>
+particlesJS("particles-js", {
+  particles: {
+    number: {
+      value: 90,
+      density: { enable: true, value_area: 800 }
+    },
+    color: { value: "#00c6ff" },
+    shape: { type: "circle" },
+    opacity: {
+      value: 0.5,
+      anim: { enable: true, speed: 1, opacity_min: 0.3 }
+    },
+    size: {
+      value: 3,
+      random: true
+    },
+    line_linked: {
+      enable: true,
+      distance: 150,
+      color: "#00c6ff",
+      opacity: 0.4,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 2,
+      direction: "none",
+      out_mode: "out"
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: { enable: true, mode: "grab" },
+      onclick: { enable: true, mode: "push" }
+    }
+  },
+  retina_detect: true
+});
+</script>
+
+<script>
+
+let sessions = JSON.parse(localStorage.getItem("tekai_chat_sessions") || "[]");
+let currentSessionId = null;
+let lastTableData = null;
+let tableStore = {}; //store all tables separately
+
+function saveSessions() {
+  localStorage.setItem("tekai_chat_sessions", JSON.stringify(sessions));
+}
+
+function renderHistory() {
+  const box = document.getElementById("historyList");
+  box.innerHTML = "";
+  sessions.forEach(s => {
+    const row = document.createElement("div");
+    row.className = "chat-item";
+
+    const title = document.createElement("span");
+    title.innerText = s.title;
+    title.onclick = () => loadChat(s.id);
+
+    const del = document.createElement("button");
+    del.className = "btn btn-sm btn-danger ms-2";
+    del.innerText = "🗑";
+    del.onclick = e => {
+      e.stopPropagation();
+      deleteChat(s.id);
+    };
+
+    row.appendChild(title);
+    row.appendChild(del);
+    box.appendChild(row);
+  });
+}
+
+function deleteChat(id) {
+  sessions = sessions.filter(s => s.id !== id);
+  saveSessions();
+  sessions.length ? loadChat(sessions[0].id) : newChat();
+  renderHistory();
+}
+
+function clearHistory() {
+  sessions = [];
+  saveSessions();
+  newChat();
+  renderHistory();
+}
+
+function newChat() {
+  const id = Date.now();
+  sessions.push({ id, title: "New Chat", messages: [] });
+  currentSessionId = id;
+  saveSessions();
+  renderHistory();
+  renderChat([]);
+}
+
+function loadChat(id) {
+  currentSessionId = id;
+  const session = sessions.find(s => s.id === id);
+  renderChat(session.messages);
+}
+
+function renderChat(messages) {
+  const box = document.getElementById("chatBox");
+  box.innerHTML = "";
+  messages.forEach(m => {
+    const div = document.createElement("div");
+    div.className = "chat-bubble " + m.role;
+    div.innerHTML = `<b>${m.role === "user" ? "You" : "TekAI"}:</b><br>${m.html}`;
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+
+// ================= HANDLE SEARCH =================
+async function handleSearch() {
+  const input = document.getElementById("aiInput");
+  const text = input.value.trim();
+  if (!text) return;
+
+  const session = sessions.find(s => s.id === currentSessionId);
+  if (!session.messages.length) session.title = text.slice(0, 30);
+
+  session.messages.push({ role: "user", html: text });
+  input.value = "";
+  renderChat(session.messages);
+
+  const loaderIndex = session.messages.length;
+  session.messages.push({ role: "assistant", html: "TekAI is processing..." });
+  renderChat(session.messages);
+
+  try {
+    const res = await fetch("http://127.0.0.1:9000/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text })
+    });
+
+    if (!res.ok) throw new Error("HTTP error " + res.status);
+
+    const data = await res.json();
+    let html = (data.text || "No response from AI").replace(/\n/g, "<br>");
+
+    if (data.rows?.length) {
+      lastTableData = data;
+      
+
+    const tableId = "table_" + Date.now();
+
+    tableStore[tableId] = JSON.parse(JSON.stringify(data));;
+
+    html += `<div class="table-wrapper" id="${tableId}"></div>
+         <div style="margin-top:10px;">
+           <button class="btn btn-success btn-sm" onclick="downloadExcel('${tableId}')">Download Excel</button>
+
+         </div>`;
+
+    setTimeout(() => {
+      renderVirtualTable(tableId, data);
+    }, 50);
+
+    }
+
+    session.messages[loaderIndex] = { role: "assistant", html };
+    saveSessions();
+    renderChat(session.messages);
+    renderHistory();
+
+  } catch {
+    session.messages[loaderIndex] = { role: "assistant", html: "Server error." };
+    renderChat(session.messages);
+  }
+}
+
+
+// ================= VIRTUAL TABLE =================
+function renderVirtualTable(containerId, data) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = "";
+  const table = document.createElement("table");
+
+  let html = "<thead><tr><th>S.No</th>";
+  data.columns.forEach(c => html += `<th>${c}</th>`);
+  html += "</tr></thead><tbody></tbody>";
+
+  table.innerHTML = html;
+  container.appendChild(table);
+
+  const tbody = table.querySelector("tbody");
+  const batchSize = 500;
+  let rendered = 0;
+
+  function renderBatch() {
+    const fragment = document.createDocumentFragment();
+
+    for (let i = rendered; i < Math.min(rendered + batchSize, data.rows.length); i++) {
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        `<td>${i + 1}</td>` +
+        data.columns.map(c => `<td>${data.rows[i][c] ?? ""}</td>`).join("");
+      fragment.appendChild(tr);
+    }
+
+    tbody.appendChild(fragment);
+    rendered += batchSize;
+
+    if (rendered < data.rows.length) {
+      requestAnimationFrame(renderBatch);
+    } else {
+
+      //  COLUMN HIDING USING BACKEND TYPE
+      const columnsToHideMap = {
+        mess: ['UserId', 'QuarterId', 'OrderId', 'Alloted', '__payment_status'],
+        academic: ['FormSubmissionId', 'UserId', 'VerificationStage', 'OrderId', '_payment_status'],
+        hostel: ['HostelRequestId', 'UserId', 'isReqiestedVerified', 'RejectedRemark', '_payment_status']
+      };
+
+      const reportType = (data.type || "").toLowerCase();
+      const columnsToHide = columnsToHideMap[reportType] || [];
+
+      const headers = table.querySelectorAll("th");
+      const hideIndexes = [];
+
+      headers.forEach((th, idx) => {
+        if (columnsToHide.includes(th.innerText.trim())) {
+          hideIndexes.push(idx);
+          th.style.display = "none";
+        }
+      });
+
+      table.querySelectorAll("tbody tr").forEach(tr => {
+        hideIndexes.forEach(i => {
+          if (tr.cells[i]) tr.cells[i].style.display = "none";
+        });
+      });
+    }
+  }
+
+  renderBatch();
+}
+
+
+// ================= EXCEL DOWNLOAD =================
+function downloadExcel(tableId) {
+  const data = tableStore[tableId];
+  if (!data) {
+    alert("Table data not found!");
+    return;
+  }
+
+  const rows = data.rows.map((r, i) => {
+    const obj = { "S.No": i + 1 };
+    data.columns.forEach(c => obj[c] = r[c] ?? "");
+    return obj;
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Report");
+
+  XLSX.writeFile(wb, `TekAI_Report_${tableId}.xlsx`);
+}
+
+
+
+
+// ================= ENTER KEY =================
+document.getElementById("aiInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") handleSearch();
+});
+
+
+// ================= INIT =================
+if (!sessions.length) newChat();
+else {
+  currentSessionId = sessions[0].id;
+  renderHistory();
+  loadChat(currentSessionId);
+}
+</script>
+
